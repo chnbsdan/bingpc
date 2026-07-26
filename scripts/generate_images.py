@@ -2,24 +2,28 @@ import os
 import json
 import requests
 from datetime import datetime, timedelta
+from PIL import Image
+from io import BytesIO
 
-# 配置 - 改成 docs/picture/
+# 配置
 PICTURE_DIR = "./docs/picture"
-DOCS_JSON = "./docs/images.json"
 KEEP_DAYS = 30
 
 def ensure_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
-def download_image(url, save_path):
-    """下载图片到本地"""
+def download_and_convert_to_webp(url, save_path):
+    """下载图片并转换为 WebP"""
     try:
         resp = requests.get(url, timeout=30)
         if resp.status_code == 200:
-            with open(save_path, 'wb') as f:
-                f.write(resp.content)
-            print(f"下载成功: {save_path}")
+            img = Image.open(BytesIO(resp.content))
+            if img.mode in ('RGBA', 'LA'):
+                img = img.convert('RGB')
+            # 保存为 WebP，质量 85
+            img.save(save_path, 'WEBP', quality=85, method=6)
+            print(f"下载并转换成功: {save_path}")
             return True
     except Exception as e:
         print(f"下载失败 {url}: {e}")
@@ -39,10 +43,10 @@ def clean_old_images():
     
     cutoff = datetime.now() - timedelta(days=KEEP_DAYS)
     for filename in os.listdir(PICTURE_DIR):
-        if not filename.endswith('.jpg'):
+        if not filename.endswith('.webp'):
             continue
         try:
-            date_str = filename.replace('.jpg', '')
+            date_str = filename.replace('.webp', '')
             file_date = datetime.strptime(date_str, '%Y-%m-%d')
             if file_date < cutoff:
                 os.remove(os.path.join(PICTURE_DIR, filename))
@@ -51,7 +55,7 @@ def clean_old_images():
             print(f"处理文件失败 {filename}: {e}")
 
 def main():
-    print("开始生成图片...")
+    print("开始生成 WebP 图片...")
     ensure_dir(PICTURE_DIR)
     
     # 获取最近 30 天的图片
@@ -64,7 +68,7 @@ def main():
             print(f"获取图片失败: {e}")
             break
     
-    # 下载图片
+    # 下载并转换图片
     downloaded = []
     for img in all_images:
         date = img.get('enddate', '')
@@ -72,7 +76,7 @@ def main():
             continue
         
         date_str = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
-        filename = f"{date_str}.jpg"
+        filename = f"{date_str}.webp"
         save_path = os.path.join(PICTURE_DIR, filename)
         
         if os.path.exists(save_path):
@@ -87,7 +91,7 @@ def main():
         urlbase = img.get('urlbase', '')
         if urlbase:
             image_url = f"https://www.bing.com{urlbase}_1920x1080.jpg"
-            if download_image(image_url, save_path):
+            if download_and_convert_to_webp(image_url, save_path):
                 downloaded.append({
                     'date': date_str,
                     'path': f'/picture/{filename}',
@@ -97,11 +101,11 @@ def main():
     # 清理旧图片
     clean_old_images()
     
-    # 生成图片索引
+    # 生成图片索引（给 API 用）
     with open('./docs/picture/index.json', 'w', encoding='utf-8') as f:
         json.dump(downloaded, f, ensure_ascii=False, indent=2)
     
-    print(f"完成！共下载 {len(downloaded)} 张图片")
+    print(f"完成！共 {len(downloaded)} 张 WebP 图片")
 
 if __name__ == '__main__':
     main()
