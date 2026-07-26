@@ -1,16 +1,17 @@
-// _worker.js - 完整版（首页内嵌）
+// _worker.js - 完整版
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     const path = url.pathname;
     const base = `${url.protocol}//${url.host}`;
 
-    // ===== 1. 静态资源放行 =====
+    // ===== 1. 静态资源放行（最先匹配） =====
     if (
       path.startsWith('/picture/') ||
       path.startsWith('/css/') ||
       path.startsWith('/js/') ||
       path.startsWith('/img/') ||
+      path === '/favicon.ico' ||
       path.endsWith('.ico') ||
       path.endsWith('.png') ||
       path.endsWith('.jpg') ||
@@ -21,50 +22,11 @@ export default {
       return fetch(request.url);
     }
 
-    // ===== 2. 首页 - 直接返回 HTML 字符串（不 fetch） =====
+    // ===== 2. 首页 =====
     if (path === '/' || path === '/index.html') {
-      const html = `<!DOCTYPE html>
-<html lang="zh">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>必应壁纸</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #121212; color: #e0e0e0; }
-    h1 { text-align: center; color: #fff; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
-    .card { background: #1e1e1e; border-radius: 12px; overflow: hidden; transition: transform 0.2s; }
-    .card:hover { transform: translateY(-5px); }
-    .card img { width: 100%; height: 200px; object-fit: cover; }
-    .card .info { padding: 15px; }
-    .card .date { font-size: 0.9rem; color: #aaa; }
-    .card .copyright { font-size: 0.8rem; color: #666; margin-top: 5px; }
-  </style>
-</head>
-<body>
-  <h1>🌅 Bing 每日壁纸</h1>
-  <div id="grid" class="grid">加载中...</div>
-  <script>
-    fetch('/picture/index.json')
-      .then(r => r.json())
-      .then(data => {
-        const grid = document.getElementById('grid');
-        grid.innerHTML = data.map(item => \`
-          <div class="card">
-            <img src="\${item.path}" alt="\${item.date}" loading="lazy" />
-            <div class="info">
-              <div class="date">\${item.date}</div>
-              <div class="copyright">\${item.copyright || ''}</div>
-            </div>
-          </div>
-        \`).join('');
-      })
-      .catch(() => { document.getElementById('grid').textContent = '加载失败'; });
-  </script>
-</body>
-</html>`;
-      return new Response(html, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' }
+      const resp = await fetch(new URL('/index.html', base).toString());
+      return new Response(resp.body, {
+        headers: { 'Content-Type': 'text/html' }
       });
     }
 
@@ -72,29 +34,27 @@ export default {
     if (path === '/api') {
       const html = `<!DOCTYPE html>
 <html lang="zh">
-<head><meta charset="UTF-8"><title>图片 API 服务</title>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>图片 API 服务</title>
 <style>
-body { font-family: system-ui; max-width: 720px; margin: 2rem auto; padding: 1rem; line-height: 1.6; background: #f8f9fa; color: #1a1a2e; }
-h1 { color: #16213e; }
-code { background: #f1f3f5; padding: 0.2rem 0.4rem; border-radius: 4px; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; max-width: 780px; margin: 3rem auto; padding: 0 1.5rem; line-height: 1.8; color: #1a1a2e; background: #f8f9fa; }
+h1 { font-size: 2rem; font-weight: 700; color: #16213e; margin-bottom: 0.5rem; }
+.subtitle { color: #6c757d; font-size: 1rem; margin-bottom: 2rem; border-left: 4px solid #4a90d9; padding-left: 1rem; }
 .card { background: #fff; border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 1.25rem; border: 1px solid #e9ecef; }
-.footer { margin-top: 2.5rem; text-align: center; color: #868e96; }
+.card h2 { font-size: 1.1rem; color: #4a90d9; margin-bottom: 0.5rem; }
+.card code { background: #f1f3f5; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.85rem; color: #d63384; }
+.footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef; text-align: center; color: #868e96; font-size: 0.85rem; }
+.footer a { color: #4a90d9; text-decoration: none; }
+@media (max-width: 500px) { body { margin: 1.5rem auto; } .card { padding: 1rem 1.25rem; } h1 { font-size: 1.5rem; } }
 </style>
 </head>
 <body>
 <h1>📷 图片 API 服务</h1>
-<div class="card">
-  <h2>/api/random</h2>
-  <p><code>${base}/api/random</code> → 随机图片</p>
-  <p><code>${base}/api/random?redirect=true</code> → 重定向</p>
-</div>
-<div class="card">
-  <h2>/api/daily</h2>
-  <p><code>${base}/api/daily</code> → 今日图片 (WebP)</p>
-  <p><code>${base}/api/daily?format=jpeg</code> → JPEG</p>
-  <p><code>${base}/api/daily?redirect=true</code> → 重定向</p>
-</div>
-<div class="footer">Powered by Cloudflare</div>
+<div class="subtitle">提供随机图像和每日图像接口，基于 Bing 每日壁纸</div>
+<div class="card"><h2>🎲 /api/random</h2><p><code>${base}/api/random</code> → 返回随机图片</p><p><code>${base}/api/random?redirect=true</code> → 302 重定向</p></div>
+<div class="card"><h2>📅 /api/daily</h2><p><code>${base}/api/daily</code> → 今日图片 (WebP)</p><p><code>${base}/api/daily?format=jpeg</code> → JPEG</p><p><code>${base}/api/daily?format=original</code> → 原始 JPEG</p><p><code>${base}/api/daily?redirect=true</code> → 302 重定向</p></div>
+<div class="card"><h2>ℹ️ 使用说明</h2><p>所有图片来自 Bing 每日壁纸，仅限个人使用。</p></div>
+<div class="footer">Powered by Cloudflare Workers · <a href="${base}">返回首页</a></div>
 </body>
 </html>`;
       return new Response(html, {
@@ -158,7 +118,7 @@ code { background: #f1f3f5; padding: 0.2rem 0.4rem; border-radius: 4px; }
       }
     }
 
-    // ===== 6. 其他 =====
+    // ===== 6. 其他请求返回 404 =====
     return new Response('Not Found', { status: 404 });
   }
 };
