@@ -15,8 +15,10 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
 
     steps:
     - uses: actions/checkout@v2
@@ -31,16 +33,17 @@ jobs:
     - name: Run Java Application
       run: java -jar target/bing-wallpaper-jar-with-dependencies.jar
 
-    - name: upload files to OSS
-      uses: fangbinwei/aliyun-oss-website-action@v1
-      with:
-          accessKeyId: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          accessKeySecret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-          bucket: bing-hk
-          # use your own endpoint
-          endpoint: oss-cn-hongkong.aliyuncs.com
-          folder: docs
-          
+    # 阿里云 OSS 上传已注释
+    # - name: upload files to OSS
+    #   uses: fangbinwei/aliyun-oss-website-action@v1
+    #   with:
+    #       accessKeyId: ${{ secrets.OSS_ACCESS_KEY_ID }}
+    #       accessKeySecret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+    #       bucket: bing-hk
+    #       # use your own endpoint
+    #       endpoint: oss-cn-hongkong.aliyuncs.com
+    #       folder: docs
+
     - name: Commit files
       run: |
          git config --local user.email "niumoo@126.com"
@@ -51,10 +54,10 @@ jobs:
          git add picture/*
          git add docs/*
          git add zh-cn/*
-         git commit -m "update readme.md"
+         git commit -m "update readme.md" || echo "No changes to commit"
+
     - name: Push changes
-      uses:  ad-m/github-push-action@master
+      uses: ad-m/github-push-action@master
       with:
-         github_token: ${{ secrets.MY_GIT_TOKEN }}
+         github_token: ${{ secrets.GITHUB_TOKEN }}
          branch: main
-    
