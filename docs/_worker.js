@@ -1,14 +1,12 @@
-// _worker.js - 完整版
+// _worker.js - 完整修复版
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     const path = url.pathname;
     const base = `${url.protocol}//${url.host}`;
 
-    // ===== 1. 静态资源直接放行 =====
+    // ===== 1. 静态资源直接放行（用 request.url 避免递归） =====
     if (
-      path === '/' ||
-      path === '/index.html' ||
       path.startsWith('/picture/') ||
       path.startsWith('/css/') ||
       path.startsWith('/js/') ||
@@ -23,10 +21,17 @@ export default {
       return fetch(request.url);
     }
 
-    // ===== 2. API 文档 =====
+    // ===== 2. 首页 - 直接返回 index.html 内容 =====
+    if (path === '/' || path === '/index.html') {
+      const resp = await fetch(new URL('/index.html', base).toString());
+      return new Response(resp.body, {
+        headers: { 'Content-Type': 'text/html' }
+      });
+    }
+
+    // ===== 3. API 文档 =====
     if (path === '/api') {
-      const html = `
-<!DOCTYPE html>
+      const html = `<!DOCTYPE html>
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
@@ -43,81 +48,26 @@ export default {
       color: #1a1a2e;
       background: #f8f9fa;
     }
-    h1 {
-      font-size: 2rem;
-      font-weight: 700;
-      color: #16213e;
-      margin-bottom: 0.5rem;
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .subtitle {
-      color: #6c757d;
-      font-size: 1rem;
-      margin-bottom: 2rem;
-      border-left: 4px solid #4a90d9;
-      padding-left: 1rem;
-    }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      padding: 1.5rem 2rem;
-      margin-bottom: 1.25rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-      border: 1px solid #e9ecef;
-      transition: box-shadow 0.2s;
-    }
-    .card:hover {
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-    }
-    .card h2 {
-      font-size: 1.1rem;
-      color: #4a90d9;
-      margin-bottom: 0.5rem;
-      font-weight: 600;
-    }
-    .card p {
-      margin: 0.25rem 0;
-      color: #343a40;
-    }
-    .card code {
-      background: #f1f3f5;
-      padding: 0.15rem 0.5rem;
-      border-radius: 4px;
-      font-size: 0.85rem;
-      color: #d63384;
-      word-break: break-all;
-    }
-    .footer {
-      margin-top: 2.5rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #e9ecef;
-      text-align: center;
-      color: #868e96;
-      font-size: 0.85rem;
-    }
-    .footer a {
-      color: #4a90d9;
-      text-decoration: none;
-    }
-    @media (max-width: 500px) {
-      body { margin: 1.5rem auto; }
-      .card { padding: 1rem 1.25rem; }
-      h1 { font-size: 1.5rem; }
-    }
+    h1 { font-size: 2rem; font-weight: 700; color: #16213e; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+    .subtitle { color: #6c757d; font-size: 1rem; margin-bottom: 2rem; border-left: 4px solid #4a90d9; padding-left: 1rem; }
+    .card { background: #fff; border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border: 1px solid #e9ecef; transition: box-shadow 0.2s; }
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .card h2 { font-size: 1.1rem; color: #4a90d9; margin-bottom: 0.5rem; font-weight: 600; }
+    .card p { margin: 0.25rem 0; color: #343a40; }
+    .card code { background: #f1f3f5; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.85rem; color: #d63384; word-break: break-all; }
+    .footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef; text-align: center; color: #868e96; font-size: 0.85rem; }
+    .footer a { color: #4a90d9; text-decoration: none; }
+    @media (max-width: 500px) { body { margin: 1.5rem auto; } .card { padding: 1rem 1.25rem; } h1 { font-size: 1.5rem; } }
   </style>
 </head>
 <body>
   <h1>📷 图片 API 服务</h1>
   <div class="subtitle">提供随机图像和每日图像接口，基于 Bing 每日壁纸</div>
-
   <div class="card">
     <h2>🎲 /api/random</h2>
     <p><code>${base}/api/random</code> → 返回随机图片</p>
     <p><code>${base}/api/random?redirect=true</code> → 302 重定向到随机图片</p>
   </div>
-
   <div class="card">
     <h2>📅 /api/daily</h2>
     <p><code>${base}/api/daily</code> → 返回今日图片 (WebP)</p>
@@ -125,16 +75,12 @@ export default {
     <p><code>${base}/api/daily?format=original</code> → 返回原始 JPEG</p>
     <p><code>${base}/api/daily?redirect=true</code> → 302 重定向到今日图片</p>
   </div>
-
   <div class="card">
     <h2>ℹ️ 使用说明</h2>
     <p>所有图片来自 Bing 每日壁纸，仅限个人使用。</p>
     <p>数据更新时间：每日 12:00 (UTC+8)</p>
   </div>
-
-  <div class="footer">
-    Powered by Cloudflare Workers · <a href="${base}">返回首页</a>
-  </div>
+  <div class="footer">Powered by Cloudflare Workers · <a href="${base}">返回首页</a></div>
 </body>
 </html>`;
       return new Response(html, {
@@ -142,7 +88,7 @@ export default {
       });
     }
 
-    // ===== 3. 随机图片 =====
+    // ===== 4. 随机图片 =====
     if (path === '/api/random') {
       try {
         const resp = await fetch(`${base}/picture/index.json`);
@@ -170,13 +116,9 @@ export default {
       }
     }
 
-    // ===== 4. 每日图片 =====
+    // ===== 5. 每日图片 =====
     if (path === '/api/daily') {
       try {
-        const format = url.searchParams.get('format') || 'webp';
-        const redirect = url.searchParams.get('redirect') === 'true';
-
-        // 先获取最新图片
         const resp = await fetch(`${base}/picture/index.json`);
         if (!resp.ok) {
           return new Response('Failed to load index.json', { status: 502 });
@@ -185,37 +127,15 @@ export default {
         if (!data || data.length === 0) {
           return new Response('No images found', { status: 404 });
         }
-
         const daily = data[0];
-        let imagePath = daily.path;
-
-        // 如果请求 JPEG 格式，尝试替换扩展名
-        if (format === 'jpeg') {
-          imagePath = imagePath.replace('.webp', '.jpg');
-        } else if (format === 'original') {
-          imagePath = imagePath.replace('.webp', '_original.jpg');
-        }
-
+        const redirect = url.searchParams.get('redirect') === 'true';
         if (redirect) {
-          return Response.redirect(imagePath, 302);
+          return Response.redirect(daily.path, 302);
         }
-
-        const imgResp = await fetch(`${base}${imagePath}`);
-        if (!imgResp.ok) {
-          // 如果 JPEG 不存在，回退到 WebP
-          const fallbackResp = await fetch(`${base}${daily.path}`);
-          return new Response(fallbackResp.body, {
-            headers: {
-              'Content-Type': 'image/webp',
-              'Cache-Control': 'public, max-age=10800'
-            }
-          });
-        }
-
-        const contentType = format === 'webp' ? 'image/webp' : 'image/jpeg';
+        const imgResp = await fetch(`${base}${daily.path}`);
         return new Response(imgResp.body, {
           headers: {
-            'Content-Type': contentType,
+            'Content-Type': 'image/webp',
             'Cache-Control': 'public, max-age=10800'
           }
         });
@@ -224,7 +144,7 @@ export default {
       }
     }
 
-    // ===== 5. 其他请求放行 =====
-    return fetch(request.url);
+    // ===== 6. 其他请求返回 404 =====
+    return new Response('Not Found', { status: 404 });
   }
 };
