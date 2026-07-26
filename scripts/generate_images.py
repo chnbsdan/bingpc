@@ -2,10 +2,9 @@ import os
 import json
 import requests
 from datetime import datetime, timedelta
-import shutil
 
-# 配置
-PICTURE_DIR = "./picture"
+# 配置 - 改成 docs/picture/
+PICTURE_DIR = "./docs/picture"
 DOCS_JSON = "./docs/images.json"
 KEEP_DAYS = 30
 
@@ -72,12 +71,10 @@ def main():
         if not date:
             continue
         
-        # 格式化日期
         date_str = f"{date[:4]}-{date[4:6]}-{date[6:8]}"
         filename = f"{date_str}.jpg"
         save_path = os.path.join(PICTURE_DIR, filename)
         
-        # 如果已存在则跳过
         if os.path.exists(save_path):
             print(f"图片已存在: {filename}")
             downloaded.append({
@@ -87,7 +84,6 @@ def main():
             })
             continue
         
-        # 构建图片 URL
         urlbase = img.get('urlbase', '')
         if urlbase:
             image_url = f"https://www.bing.com{urlbase}_1920x1080.jpg"
@@ -101,8 +97,8 @@ def main():
     # 清理旧图片
     clean_old_images()
     
-    # 生成图片索引（给 API 用）
-    with open('./picture/index.json', 'w', encoding='utf-8') as f:
+    # 生成图片索引
+    with open('./docs/picture/index.json', 'w', encoding='utf-8') as f:
         json.dump(downloaded, f, ensure_ascii=False, indent=2)
     
     print(f"完成！共下载 {len(downloaded)} 张图片")
