@@ -23,7 +23,7 @@ export default async function onRequest(context) {
   </style>
 </head>
 <body>
-  <h1>📷 图片 API 服务</h1>
+  <h1>📷小史先生 图片 API 服务</h1>
   <p>提供 <strong>随机图像</strong> 和 <strong>每日图像</strong> 接口。</p>
 
   <div class="endpoint">
