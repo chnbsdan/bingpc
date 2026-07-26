@@ -40,7 +40,9 @@ jobs:
         python-version: '3.10'
 
     - name: Install Python dependencies
-      run: pip install requests
+      run: |
+        pip install requests
+        pip install Pillow
 
     - name: Generate images
       run: python scripts/generate_images.py
