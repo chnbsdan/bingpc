@@ -20,7 +20,7 @@ export default {
       path.endsWith('.webp') ||
       path.endsWith('.json')
     ) {
-      return fetch(request);
+      return fetch(request.url);
     }
 
     // ===== 2. API 文档 =====
@@ -225,6 +225,6 @@ export default {
     }
 
     // ===== 5. 其他请求放行 =====
-    return fetch(request);
+    return fetch(request.url);
   }
 };
